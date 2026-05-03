@@ -231,10 +231,32 @@ const Events = () => {
 
         {/* Ingestion Health Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <SourceIndicator source="GitHub Actions" lastSync="2 min ago" count={events.filter(e => e.source === 'github').length} status="live" />
-          <SourceIndicator source="AWS CloudTrail" lastSync="15 min ago" count={events.filter(e => e.source === 'aws_cloudtrail').length} status="live" />
-          <SourceIndicator source="Jira" lastSync="45 min ago" count={events.filter(e => e.source === 'jira').length} status="stale" />
-          <SourceIndicator source="Okta SSO" lastSync="3 hrs ago" count={events.filter(e => e.source === 'okta').length} status="error" />
+          {['github', 'aws_cloudtrail', 'jira', 'okta'].map(src => {
+            const srcEvents = events.filter(e => e.source === src);
+            let lastSync = 'Never';
+            let status = 'error';
+            if (srcEvents.length > 0) {
+              const diffMs = new Date() - new Date(srcEvents[0].timestamp);
+              const diffMins = Math.floor(diffMs / 60000);
+              const diffHrs = Math.floor(diffMins / 60);
+              if (diffMins < 60) lastSync = `${diffMins} min ago`;
+              else if (diffHrs < 24) lastSync = `${diffHrs} hrs ago`;
+              else lastSync = `${Math.floor(diffHrs/24)} days ago`;
+              
+              status = diffHrs >= 24 ? 'error' : (diffHrs >= 1 ? 'stale' : 'live');
+            }
+            const displayNames = { github: 'GitHub Actions', aws_cloudtrail: 'AWS CloudTrail', jira: 'Jira', okta: 'Okta SSO' };
+            
+            return (
+              <SourceIndicator 
+                key={src}
+                source={displayNames[src]} 
+                lastSync={lastSync} 
+                count={srcEvents.length} 
+                status={status} 
+              />
+            );
+          })}
         </div>
 
         {/* Filter Bar */}

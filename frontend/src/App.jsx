@@ -11,9 +11,14 @@ import Events from './pages/Events';
 import Gaps from './pages/Gaps';
 import Remediation from './pages/Remediation';
 
+import Export from './pages/Export';
+import Connections from './pages/Connections';
+import Tasks from './pages/Tasks';
+import Policies from './pages/Policies';
+
 // Placeholder pages (future phases)
 import { 
-  Policies, Export, Connections, Tasks, AuditorPortal 
+  AuditorPortal 
 } from './pages/Placeholders';
 
 function App() {

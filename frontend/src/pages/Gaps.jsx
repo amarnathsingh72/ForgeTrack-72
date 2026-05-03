@@ -200,7 +200,7 @@ const Gaps = () => {
         .from('gaps')
         .select('*, controls(control_code, requirement_text, evidence_type)')
         .eq('status', 'open')
-        .order('created_at', { ascending: false });
+        .order('detected_at', { ascending: false });
 
       // Enrich with task counts
       const enriched = await Promise.all((data || []).map(async (gap) => {
