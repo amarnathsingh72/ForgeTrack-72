@@ -1,0 +1,222 @@
+AUDITCHAIN: COMPLIANCE OPERATIONS CENTER
+PROJECT DOCUMENTATION AND ARCHITECTURE SPECIFICATION
+
+1. PROJECT OVERVIEW
+-------------------------------------------------------------------------------
+What is Auditchain
+Auditchain is a centralized Compliance Operations Center designed to automate and streamline security audits for modern software organizations. It continuously monitors systems against established compliance frameworks (such as SOC 2, ISO 27001, and GDPR) by ingesting real-time event logs, evaluating them against control requirements, and automatically identifying security gaps.
+
+The Problem It Solves
+Traditional compliance audits are highly manual, stressful, and disruptive. Organizations typically face a "once-a-year scramble" where engineers and compliance officers waste hundreds of hours hunting through systems, capturing screenshots, and writing documentation to prove that security controls are in place. This manual pain leads to out-of-date evidence, human error, and compliance fatigue.
+
+Who It Is For
+- Compliance Officers: Need a high-level, real-time view of organizational compliance, automated evidence collection, and the ability to confidently generate reports for external auditors.
+- Engineers: Need clear, actionable tasks to fix specific compliance gaps without having to understand the complexities of the legal frameworks, freeing them from repetitive evidence-gathering chores.
+
+
+2. CORE FEATURES
+-------------------------------------------------------------------------------
+Compliance Dashboard
+A real-time command center providing a holistic view of the organization's compliance posture. It features dynamic framework coverage rings (displaying percentage completion for SOC 2, ISO 27001, etc.), total controls active, and an immediate view of critical gaps.
+
+Event Log Explorer
+A centralized repository for all ingested activity across the organization. It features an ingestion health strip to monitor the uptime of various data sources, searchable and filterable logs (by actor, action, source, and outcome), and a CSV export utility for external reporting or auditing.
+
+Gap Queue
+An automated triage system where failed controls (Gaps) are logged. Gaps are automatically categorized by severity levels (Critical, High, Medium, Low) based on the impacted control. Officers can assign these gaps to engineers directly from the queue.
+
+Remediation Board
+A visual Kanban board used to track the lifecycle of compliance fixes. Tasks flow through four stages: Pending, In Progress, Submitted, and Verified. It includes automated alerting for overdue tasks to ensure no gap remains unaddressed prior to an audit.
+
+
+3. SYSTEM ARCHITECTURE
+-------------------------------------------------------------------------------
+Frontend (UI Layer)
+A responsive, single-page application that provides role-based interfaces for Officers and Engineers. It relies on a state-driven component architecture to display real-time metrics and manage interactive boards.
+
+Backend (API Layer)
+A robust RESTful API layer responsible for business logic, authentication validation, and orchestrating data between the database, the frontend, and external integrations.
+
+Database Design
+A relational data store enforcing strict referential integrity. It manages the relationships between users, policies, specific controls, incoming raw events, mapping confidence, and the resulting gaps and remediation tasks.
+
+Integration Layer
+A set of dedicated webhook receivers and polling cron jobs (Connectors) that ingest raw data from third-party systems like GitHub, AWS, Jira, and Okta. This layer normalizes disparate payloads into a standard Auditchain Event schema.
+
+Control Evaluation Engine
+The core rule-checking logic that runs asynchronously. It evaluates incoming normalized events against defined compliance controls to determine if the system is operating within the required security parameters.
+
+
+4. DATABASE SCHEMA
+-------------------------------------------------------------------------------
+Users Table
+- id (UUID, Primary Key)
+- email (String, Unique)
+- role (String, Enum: officer, engineer, admin)
+- display_name (String)
+
+Controls Table
+- id (Integer, Primary Key)
+- framework (String)
+- control_code (String)
+- requirement_text (Text)
+- evidence_type (String)
+- frequency (String)
+
+Events Table
+- id (Integer, Primary Key)
+- source (String, Enum: github, aws, okta, jira)
+- actor (String)
+- action (String)
+- resource (String)
+- outcome (String, Enum: success, failure)
+- raw_payload (JSONB)
+- timestamp (DateTime)
+
+Gaps Table
+- id (Integer, Primary Key)
+- control_id (Integer, Foreign Key to Controls)
+- severity (String, Enum: critical, high, medium, low)
+- status (String, Enum: open, closed)
+- detected_at (DateTime)
+
+Remediation_Tasks Table
+- id (Integer, Primary Key)
+- gap_id (Integer, Foreign Key to Gaps)
+- assigned_to (String)
+- description (Text)
+- due_date (Date)
+- status (String, Enum: pending, in_progress, submitted, verified)
+
+Integrations Table
+- id (Integer, Primary Key)
+- provider (String)
+- api_key (String, Encrypted)
+- last_sync_at (DateTime)
+- status (String)
+
+
+5. API DESIGN
+-------------------------------------------------------------------------------
+Authentication Approach
+The system utilizes JWT (JSON Web Tokens) for session management. Upon successful login, the client receives a short-lived access token and a secure HTTP-only refresh token.
+
+Key REST API Endpoints:
+
+GET /api/v1/dashboard/metrics
+- Request: Headers { Authorization: Bearer <token> }
+- Response: { "coverage": 85, "open_gaps": 4, "controls_active": 15 }
+
+GET /api/v1/events
+- Request: Query Params { source, limit, offset }
+- Response: { "data": [ { "id": 1, "action": "ConsoleLogin", ... } ], "total": 1200 }
+
+GET /api/v1/gaps
+- Request: Query Params { severity, status }
+- Response: { "data": [ { "id": 1, "severity": "critical", "control": {...} } ] }
+
+POST /api/v1/tasks
+- Request: Body { "gap_id": 1, "assigned_to": "dev@company.com", "due_date": "2026-06-01" }
+- Response: { "status": "created", "task_id": 42 }
+
+PATCH /api/v1/tasks/:id/status
+- Request: Body { "status": "submitted", "evidence_ref": "s3://link" }
+- Response: { "status": "updated" }
+
+
+6. INTEGRATIONS
+-------------------------------------------------------------------------------
+GitHub
+Auditchain connects via a GitHub App or Personal Access Token. It pulls commit logs, monitors Pull Request activity (ensuring peer reviews occur), and verifies branch protection rules to satisfy Change Management controls.
+
+AWS
+Integration is achieved via cross-account IAM roles. Auditchain pulls CloudTrail logs to monitor root account logins and infrastructure modifications. It also queries IAM policies and S3 bucket configurations to ensure encryption and least-privilege access are enforced.
+
+Jira
+Connects via OAuth2. When a Compliance Officer creates a remediation task in Auditchain, the integration can optionally mirror this by creating a Jira Ticket in the engineering team's backlog. Statuses sync bi-directionally.
+
+Okta
+Connects via Okta API token. Auditchain ingests user access logs, lifecycle events (onboarding/offboarding), and verifies MFA enforcement checks across the organization to satisfy Identity and Access Management controls.
+
+
+7. CONTROL EVALUATION ENGINE
+-------------------------------------------------------------------------------
+Ingesting Events
+The engine receives continuous streams of normalized data from the Integration Layer. These events are queued and processed asynchronously.
+
+Mapping Events to Compliance Controls
+The engine utilizes a deterministic ruleset (and optionally AI heuristics) to map incoming events to specific controls. For example, an Okta "user.mfa.factor.activate" event is mapped to SOC 2 Control CC6.4 (MFA requirements).
+
+Marking a Control as PASS / FAIL
+The engine evaluates the event's outcome against the control's expectation. If an AWS CloudTrail event shows an S3 bucket was created without encryption, the evaluation logic flags this as a FAIL for data protection controls. If it was created with encryption, it is logged as a PASS (evidence).
+
+How a FAIL Becomes a Gap
+When the engine registers a FAIL, it immediately creates a new record in the Gaps Table. The engine assigns a severity based on the predefined weight of the control, marking it as an Open Gap for the Compliance Officer to review.
+
+
+8. USER ROLES & PERMISSIONS
+-------------------------------------------------------------------------------
+Compliance Officer
+Has full read/write access to the entire platform. Can view dashboards, connect integrations, review event logs, create remediation tasks, and generate audit export reports.
+
+Engineer
+Has restricted access. Cannot view the dashboard, policies, or full event logs. Can only view the Remediation Board and their specifically assigned tasks. Engineers have permission to upload evidence and transition task statuses to "Submitted".
+
+Admin
+Has system-level access. Responsible for user provisioning, role assignments, global system settings, and managing raw integration credentials.
+
+
+9. TECH STACK RECOMMENDATION
+-------------------------------------------------------------------------------
+Frontend: React.js paired with Tailwind CSS for rapid, responsive UI development and maintaining a strict design system.
+Backend: Python (FastAPI) is recommended over Node.js (Express) to easily accommodate future AI/Machine Learning pipelines for document parsing and natural language control extraction.
+Database: PostgreSQL for robust relational data integrity, JSONB support for raw event payloads, and Row Level Security capabilities.
+Queue: Redis paired with BullMQ (or Celery for Python) to handle high-volume event log ingestion and asynchronous control evaluation.
+Auth: JWT + OAuth2 for secure, stateless API authentication and seamless single sign-on integration.
+
+
+10. DEVELOPMENT ROADMAP
+-------------------------------------------------------------------------------
+Phase 1: Core UI + Database + Auth
+Set up the React application, build the PostgreSQL database schema, implement JWT authentication, and secure routes via role guards.
+
+Phase 2: GitHub integration + Event Log
+Build the first connector to pull GitHub data. Develop the Event Log Explorer UI to visualize the ingested data.
+
+Phase 3: Control Engine + Gap Queue
+Develop the Control Evaluation Engine to analyze GitHub events. Build the Gap Queue UI to display failures identified by the engine.
+
+Phase 4: Remediation Board + Task Assignment
+Build the Kanban interface. Implement the ability for Officers to assign gaps as tasks to Engineers, and for Engineers to upload evidence.
+
+Phase 5: AWS, Jira, Okta integrations
+Expand the Integration Layer to support AWS CloudTrail, Jira bidirectional syncing, and Okta identity logging.
+
+Phase 6: Reporting + Audit Export
+Develop the reporting engine to aggregate all passing controls and verified evidence into a downloadable package for external auditors.
+
+
+11. CURRENT STATE VS TARGET STATE
+-------------------------------------------------------------------------------
+Current State
+The application currently consists of UI mockups only. The frontend is built and styled, demonstrating the visual flow of the application, but there is no functional backend, no real database persistence, and no actual event ingestion occurring.
+
+Target State
+A fully functional, real-time application where integrations are actively pulling data, the evaluation engine is processing rules automatically, and the database acts as the single source of truth.
+
+Priority Order for Development
+1. Stand up the backend server (FastAPI) and PostgreSQL database.
+2. Wire the existing React frontend to the real backend APIs.
+3. Build the core Control Evaluation Engine logic.
+4. Implement the first data integration (GitHub).
+
+
+12. GLOSSARY
+-------------------------------------------------------------------------------
+Control: A specific security rule or requirement mandated by a compliance framework (e.g., "All databases must be encrypted at rest").
+Gap: A failure or violation of a Control. A gap indicates that the organization is currently non-compliant in a specific area.
+Evidence: Proof that a control is being met. This can be an automated log (PASS event) or a manual upload (screenshot or document).
+Remediation: The act of fixing a Gap to bring the system back into compliance.
+Framework: A standardized set of compliance requirements, such as SOC 2, ISO 27001, or GDPR.
+Ingestion: The process of pulling raw data from external integrations into the Auditchain system.
+Event Log: A standardized, immutable record of an action that occurred in a connected system.
