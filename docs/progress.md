@@ -150,15 +150,14 @@ d:\CODING\AntiVibe\
 
 ---
 
-## 🔲 Phase 4 — AI Policy Pipeline (NEXT)
-
+## ✅ Phase 4 — AI Policy Pipeline
 | Task | Status |
 |------|--------|
-| Policy Library (`/policies`) — upload + document list | 🔲 |
-| PDF/DOCX parsing via FastAPI backend | 🔲 |
-| Gemini API for control extraction | 🔲 |
-| Ambiguity flag review UI | 🔲 |
-| Source Connections (`/connections`) | 🔲 |
+| Policy Library (`/policies`) — upload + document list | ✅ |
+| PDF/DOCX parsing via FastAPI backend | ✅ |
+| Gemini API for control extraction | ✅ |
+| Ambiguity flag review UI | ✅ |
+| Source Connections (`/connections`) | ✅ |
 
 ---
 
