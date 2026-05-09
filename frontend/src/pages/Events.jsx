@@ -1,9 +1,9 @@
 
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  Search, Filter, Download, ChevronDown, X, Activity,
-  ArrowUpRight, ChevronRight, Clock, Copy, Check
+  Search, Filter, Download, X,
+  Copy, Check
 } from 'lucide-react';
 
 /* ─── Source Status Indicator ─── */

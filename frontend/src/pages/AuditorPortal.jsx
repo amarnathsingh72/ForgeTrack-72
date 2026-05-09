@@ -12,7 +12,8 @@ const AuditorPortal = () => {
   useEffect(() => {
     const fetchAuditData = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/audit/${token}`);
+        const API_BASE = import.meta.env.VITE_API_URL || 'https://auditchain-api.onrender.com';
+        const response = await fetch(`${API_BASE}/api/audit/${token}`);
         if (!response.ok) {
           const err = await response.json();
           throw new Error(err.detail || 'Failed to load audit portal');

@@ -3,7 +3,7 @@
  * All AI pipeline operations go through the backend, not directly from the browser.
  */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://auditchain-api.onrender.com';
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, options);
