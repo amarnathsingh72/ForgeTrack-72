@@ -19,7 +19,7 @@ import Policies from './pages/Policies';
 // Placeholder pages (future phases)
 import AuditorPortal from './pages/AuditorPortal';
 
-import { PolicyProvider } from './lib/PolicyContext';
+import { PolicyProvider } from './lib/PolicyContext.jsx';
 
 function App() {
   return (

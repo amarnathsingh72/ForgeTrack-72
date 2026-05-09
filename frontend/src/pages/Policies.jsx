@@ -8,7 +8,7 @@ import StepSegment from '../components/policy/StepSegment';
 import StepReview from '../components/policy/StepReview';
 import StepResult from '../components/policy/StepResult';
 
-import { usePolicy } from '../lib/PolicyContext';
+import { usePolicy } from '../lib/PolicyContext.jsx';
 
 const Policies = () => {
   const [policies, setPolicies] = useState([]);
