@@ -3,7 +3,7 @@ import { Plus, CheckCircle2, AlertTriangle, RefreshCw, Trash2, ExternalLink } fr
 
 const sources = [
   { id: 'github', name: 'GitHub Actions', type: 'CI/CD', status: 'connected', lastSync: '10 mins ago', logo: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png' },
-  { id: 'aws', name: 'AWS CloudTrail', type: 'Infrastructure', status: 'connected', lastSync: '1 hour ago', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg' },
+  { id: 'aws_cloudtrail', name: 'AWS CloudTrail', type: 'Infrastructure', status: 'connected', lastSync: '1 hour ago', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg' },
   { id: 'jira', name: 'Jira Software', type: 'Ticketing', status: 'error', lastSync: '2 days ago', errorMsg: 'API token expired', logo: 'https://cdn.iconscout.com/icon/free/png-256/free-jira-3628777-3029997.png' },
   { id: 'okta', name: 'Okta SSO', type: 'Identity', status: 'disconnected', lastSync: 'Never', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Okta_logo.svg/1200px-Okta_logo.svg.png' }
 ];
@@ -11,9 +11,31 @@ const sources = [
 const SourceCard = ({ source }) => {
   const [connecting, setConnecting] = useState(false);
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setConnecting(true);
-    setTimeout(() => setConnecting(false), 2000);
+    try {
+      const res = await fetch(`http://localhost:8000/api/ingest/sync?source=${source.id}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Sync failed');
+      alert(`Connected and ingested data from ${source.name}`);
+      window.location.reload(); // Refresh to show active status
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/ingest/sync?source=${source.id}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Sync failed');
+      alert(`Successfully synced ${source.name}`);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setConnecting(false);
+    }
   };
 
   return (
@@ -49,8 +71,9 @@ const SourceCard = ({ source }) => {
         <div className="flex gap-2 pt-2">
           {source.status === 'connected' ? (
             <>
-              <button className="flex-1 h-8 rounded-lg bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.06)] text-[11px] font-medium text-white transition-colors flex items-center justify-center gap-1.5">
-                <RefreshCw size={12} /> Sync Now
+              <button onClick={handleSync} disabled={connecting} className="flex-1 h-8 rounded-lg bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.06)] text-[11px] font-medium text-white transition-colors flex items-center justify-center gap-1.5">
+                {connecting ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                Sync Now
               </button>
               <button className="h-8 w-8 rounded-lg bg-[rgba(244,63,94,0.05)] hover:bg-[rgba(244,63,94,0.1)] border border-[rgba(244,63,94,0.1)] text-rose-400 flex items-center justify-center transition-colors">
                 <Trash2 size={12} />

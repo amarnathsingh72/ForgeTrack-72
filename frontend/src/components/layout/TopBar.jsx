@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, ChevronRight, User as UserIcon, Key, LogOut, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Bell, Search, ChevronRight, User as UserIcon, Key, LogOut, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { usePolicy } from '../../lib/PolicyContext';
 
 const TopBar = ({ userDisplayName, role, userEmail }) => {
+  const { isProcessing, processingLabel, setWizardOpen } = usePolicy();
   const location = useLocation();
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
@@ -36,7 +38,7 @@ const TopBar = ({ userDisplayName, role, userEmail }) => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   const handleChangePassword = async () => {
@@ -69,6 +71,20 @@ const TopBar = ({ userDisplayName, role, userEmail }) => {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Background Task Indicator */}
+        {isProcessing && (
+          <button 
+            onClick={() => {
+              setWizardOpen(true);
+              navigate('/policies');
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 animate-pulse transition-all hover:bg-emerald-500/20"
+          >
+            <Loader2 size={12} className="animate-spin" />
+            <span className="text-[11px] font-bold tracking-tight uppercase">{processingLabel}</span>
+          </button>
+        )}
+
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button 

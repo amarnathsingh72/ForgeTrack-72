@@ -18,12 +18,16 @@ import Policies from './pages/Policies';
 
 // Placeholder pages (future phases)
 import { 
-  AuditorPortal 
+  // AuditorPortal 
 } from './pages/Placeholders';
+import AuditorPortal from './pages/AuditorPortal';
+
+import { PolicyProvider } from './lib/PolicyContext';
 
 function App() {
   return (
-    <BrowserRouter>
+    <PolicyProvider>
+      <BrowserRouter>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
@@ -51,6 +55,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
+    </PolicyProvider>
   );
 }
 

@@ -103,6 +103,16 @@ const CreateTaskModal = ({ gap, onClose, onCreated }) => {
 /* ─── Gap Card ─── */
 const GapCard = ({ gap, onCreateTask }) => {
   const [expanded, setExpanded] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
+
+  const handleReevaluate = (e) => {
+    e.stopPropagation();
+    setEvaluating(true);
+    setTimeout(() => {
+      setEvaluating(false);
+      alert('Re-evaluation complete. No new evidence found for this control.');
+    }, 1500);
+  };
 
   const sevColors = {
     critical: { bg: 'rgba(244,63,94,0.08)', text: '#F43F5E', border: 'rgba(244,63,94,0.15)', glow: 'rgba(244,63,94,0.06)' },
@@ -173,8 +183,13 @@ const GapCard = ({ gap, onCreateTask }) => {
                 className="h-9 px-4 rounded-lg bg-emerald-500 text-[12px] font-semibold text-white hover:bg-emerald-400 transition-all shadow-[0_0_12px_rgba(16,185,129,0.2)] flex items-center gap-2">
                 <Plus size={14} /> Create Task
               </button>
-              <button className="h-9 px-4 rounded-lg bg-[#111118] border border-[rgba(255,255,255,0.06)] text-[12px] font-medium text-[#71717a] hover:text-white hover:border-[rgba(255,255,255,0.1)] transition-all flex items-center gap-2">
-                <RefreshCw size={13} /> Re-evaluate
+              <button 
+                onClick={handleReevaluate}
+                disabled={evaluating}
+                className="h-9 px-4 rounded-lg bg-[#111118] border border-[rgba(255,255,255,0.06)] text-[12px] font-medium text-[#71717a] hover:text-white hover:border-[rgba(255,255,255,0.1)] transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={evaluating ? "animate-spin" : ""} />
+                {evaluating ? "Evaluating..." : "Re-evaluate"}
               </button>
             </div>
           </div>

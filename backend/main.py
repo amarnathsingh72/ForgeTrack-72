@@ -40,7 +40,7 @@ app = FastAPI(title="Auditchain API", version="0.4.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -437,6 +437,90 @@ def _compute_severity(control: dict) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════
+#  PHASE 4 — Evidence Ingestion (Mock)
+# ══════════════════════════════════════════════════════════════════════
+
+@app.post("/api/ingest/sync")
+async def sync_source(source: str):
+    """
+    Simulates ingesting real events from AWS, GitHub, or Okta.
+    Populates the events table with realistic mock data.
+    """
+    valid_sources = ["aws_cloudtrail", "github", "okta", "jira"]
+    if source not in valid_sources:
+        raise HTTPException(status_code=400, detail=f"Invalid source: {source}")
+
+    # Generate 10-20 mock events
+    import random
+    from datetime import timedelta
+    
+    events_to_insert = []
+    now = datetime.now(timezone.utc)
+
+    templates = {
+        "aws_cloudtrail": [
+            ("iam.user.create", "iam/user/new-service-account", "success"),
+            ("s3.bucket.policy_update", "s3/bucket/prod-data", "success"),
+            ("ec2.instance.terminate", "ec2/instance/i-04f123", "success"),
+            ("iam.user.mfa_enabled", "iam/user/dev-01", "success"),
+            ("cloudtrail.stop_logging", "cloudtrail/trail/main", "failure"),
+        ],
+        "github": [
+            ("repo.push", "repo/auditchain/main", "success"),
+            ("repo.create", "repo/auditchain/temp-fix", "success"),
+            ("team.add_member", "team/security-admins", "success"),
+            ("repo.branch_protection.disable", "repo/auditchain/main", "failure"),
+            ("secret.leak_detected", "repo/auditchain/api-server", "failure"),
+        ],
+        "okta": [
+            ("user.login", "user/admin@auditchain.dev", "success"),
+            ("user.mfa.factor.activate", "user/dev@auditchain.dev", "success"),
+            ("application.user_added", "app/aws-production", "success"),
+            ("user.account.locked", "user/guest-42", "failure"),
+            ("user.session.start", "user/officer@auditchain.dev", "success"),
+        ],
+        "jira": [
+            ("issue.created", "issue/SEC-101", "success"),
+            ("issue.transition", "issue/SEC-101", "success"),
+            ("project.deleted", "project/ARCHIVE", "failure"),
+        ]
+    }
+
+    actors = ["admin@auditchain.dev", "dev-01@auditchain.dev", "github-actions[bot]", "system-auto"]
+    
+    for _ in range(random.randint(10, 20)):
+        action, resource, outcome = random.choice(templates[source])
+        event_ts = now - timedelta(minutes=random.randint(0, 1440))
+        
+        events_to_insert.append({
+            "source": source,
+            "actor": random.choice(actors),
+            "action": action,
+            "resource": resource,
+            "outcome": outcome,
+            "raw_payload": {
+                "id": f"evt_{random.getrandbits(32)}",
+                "request_id": f"req_{random.getrandbits(32)}",
+                "user_agent": "Auditchain Ingest/1.0",
+                "ip_address": f"192.168.1.{random.randint(1, 255)}"
+            },
+            "event_ts": event_ts.isoformat(),
+            "normalized_at": now.isoformat()
+        })
+
+    try:
+        supabase.table("events").insert(events_to_insert).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to insert events: {str(e)}")
+
+    return {
+        "status": "success",
+        "source": source,
+        "events_ingested": len(events_to_insert),
+        "message": f"Successfully ingested {len(events_to_insert)} events from {source}."
+    }
+
+# ══════════════════════════════════════════════════════════════════════
 #  Utility: Get policy details
 # ══════════════════════════════════════════════════════════════════════
 
@@ -454,3 +538,61 @@ async def get_policy(policy_id: int):
     policy["controls"] = controls.data or []
 
     return policy
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  PHASE 6 — Auditor Portal
+# ══════════════════════════════════════════════════════════════════════
+
+@app.get("/api/audit/{token}")
+async def get_audit_export(token: str):
+    """
+    Public endpoint for auditors to fetch a time-bounded evidence package.
+    No authentication required, gated by a secure access_token.
+    """
+    # 1. Fetch export record
+    res = supabase.table("audit_exports").select("*").eq("access_token", token).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Invalid or expired audit token.")
+    
+    export = res.data[0]
+    if export["status"] == "expired":
+        raise HTTPException(status_code=403, detail="This audit export link has expired.")
+
+    # 2. Fetch controls for the specified framework
+    # In a real app, we'd filter strictly by the export's scope
+    controls_res = supabase.table("controls").select("*").execute()
+    controls = controls_res.data or []
+
+    # 3. For each control, fetch matched events within the date range
+    from_dt = export["from_date"]
+    to_dt = export["to_date"]
+    
+    enriched_controls = []
+    for ctrl in controls:
+        # Get mappings for this control
+        mappings_res = supabase.table("control_mappings")\
+            .select("*, events(*)")\
+            .eq("control_id", ctrl["id"])\
+            .execute()
+        
+        # Filter events by date range
+        valid_events = []
+        for m in (mappings_res.data or []):
+            ev = m.get("events")
+            if ev and from_dt <= ev["event_ts"][:10] <= to_dt:
+                valid_events.append(ev)
+        
+        # Add AI management response (simulated as per spec)
+        management_response = f"For the period {from_dt} to {to_dt}, the organization has demonstrated compliance with control {ctrl['control_code']}. Our automated monitoring system has mapped {len(valid_events)} relevant events confirming that the requirement to '{ctrl['requirement_text']}' is being met continuously."
+        
+        enriched_controls.append({
+            **ctrl,
+            "events": valid_events,
+            "management_response": management_response
+        })
+
+    return {
+        "export_details": export,
+        "controls": enriched_controls
+    }

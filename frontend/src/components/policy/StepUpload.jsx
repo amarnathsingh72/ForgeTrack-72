@@ -9,7 +9,10 @@ const FRAMEWORKS = [
   { value: 'custom', label: 'Custom / Internal' },
 ];
 
-const StepUpload = ({ onUploaded, uploading, setUploading }) => {
+import { usePolicy } from '../../lib/PolicyContext';
+
+const StepUpload = () => {
+  const { handleUpload, uploading } = usePolicy();
   const [file, setFile] = useState(null);
   const [framework, setFramework] = useState('soc2');
   const [error, setError] = useState('');
@@ -31,18 +34,9 @@ const StepUpload = ({ onUploaded, uploading, setUploading }) => {
     setFile(f);
   };
 
-  const handleUpload = async () => {
+  const onUploadClick = async () => {
     if (!file) return;
-    setUploading(true);
-    setError('');
-    try {
-      const { uploadPolicy } = await import('../../lib/api');
-      const result = await uploadPolicy(file, framework, 'officer@auditchain.dev');
-      onUploaded(result);
-    } catch (err) {
-      setError(err.message);
-      setUploading(false);
-    }
+    await handleUpload(file, framework);
   };
 
   return (
@@ -89,7 +83,7 @@ const StepUpload = ({ onUploaded, uploading, setUploading }) => {
       {error && <p className="text-rose-400 text-[12px] mt-3">{error}</p>}
 
       <button
-        onClick={handleUpload}
+        onClick={onUploadClick}
         disabled={!file || uploading}
         className="w-full mt-6 h-11 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-[13px] font-bold text-white transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >

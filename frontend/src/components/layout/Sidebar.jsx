@@ -23,7 +23,8 @@ const OfficerNav = [
 
 const EngineerNav = [
   { label: 'Overview', section: true },
-  { to: '/tasks', label: 'My Tasks', icon: CheckSquare }
+  { to: '/tasks', label: 'My Tasks', icon: CheckSquare },
+  { to: '/events', label: 'Event Log', icon: Activity }
 ];
 
 const Sidebar = ({ userRole }) => {
