@@ -161,7 +161,7 @@ const Dashboard = () => {
         });
 
         // 7. Recent events
-        const { data: evData } = await supabase.from('events').select('*').order('timestamp', { ascending: false }).limit(6);
+        const { data: evData } = await supabase.from('events').select('*').order('event_ts', { ascending: false }).limit(6);
 
         setStats({ controls: controlCount || 0, coverage: Math.min(coverage, 100), openGaps: gapCount || 0, daysToAudit });
         setFrameworks(fwData.length > 0 ? fwData : [{ name: 'SOC 2', coverage, evidenced: uniqueMapped.size, total: controlCount || 0 }]);
@@ -298,7 +298,7 @@ const Dashboard = () => {
                 return (
                   <tr key={ev.id} onClick={() => navigate('/events')} className="border-b border-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.02)] cursor-pointer">
                     <td className="py-2.5 pr-3 text-[11px] font-mono text-[#52525B] tabular-nums whitespace-nowrap">
-                      {new Date(ev.timestamp).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(ev.event_ts || ev.normalized_at).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="py-2.5 pr-3">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>{ev.source}</span>

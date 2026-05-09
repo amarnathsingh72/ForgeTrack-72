@@ -17,9 +17,6 @@ import Tasks from './pages/Tasks';
 import Policies from './pages/Policies';
 
 // Placeholder pages (future phases)
-import { 
-  // AuditorPortal 
-} from './pages/Placeholders';
 import AuditorPortal from './pages/AuditorPortal';
 
 import { PolicyProvider } from './lib/PolicyContext';
