@@ -61,7 +61,7 @@ const DetailPanel = ({ event, onClose }) => {
       <div className="p-5 space-y-5">
         {/* Meta fields */}
         {[
-          { label: 'Timestamp', value: new Date(event.timestamp).toLocaleString() },
+          { label: 'Timestamp', value: new Date(event.event_ts || event.normalized_at).toLocaleString() },
           { label: 'Source', value: event.source },
           { label: 'Actor', value: event.actor },
           { label: 'Action', value: event.action },
@@ -129,7 +129,7 @@ const Events = () => {
         const { data } = await supabase
           .from('events')
           .select('*')
-          .order('timestamp', { ascending: false });
+          .order('event_ts', { ascending: false });
 
         // Fetch control mappings for each event
         const enriched = await Promise.all((data || []).map(async (ev) => {
@@ -236,7 +236,7 @@ const Events = () => {
             let lastSync = 'Never';
             let status = 'error';
             if (srcEvents.length > 0) {
-              const diffMs = new Date() - new Date(srcEvents[0].timestamp);
+              const diffMs = new Date() - new Date(srcEvents[0].event_ts || srcEvents[0].normalized_at);
               const diffMins = Math.floor(diffMs / 60000);
               const diffHrs = Math.floor(diffMins / 60);
               if (diffMins < 60) lastSync = `${diffMins} min ago`;
@@ -336,7 +336,7 @@ const Events = () => {
                         <input type="checkbox" className="accent-emerald-500 w-3.5 h-3.5" checked={selectedRows.has(ev.id)} onChange={() => toggleRow(ev.id)} />
                       </td>
                       <td className="py-3 pr-4 text-[12px] font-mono text-[#52525B] tabular-nums whitespace-nowrap">
-                        {new Date(ev.timestamp).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(ev.event_ts || ev.normalized_at).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
                       <td className="py-3 pr-4">
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md border" style={{ background: sc.bg, color: sc.text, borderColor: sc.border }}>{ev.source}</span>
